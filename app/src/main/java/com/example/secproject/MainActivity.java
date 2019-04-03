@@ -1,6 +1,9 @@
 package com.example.secproject;
 
 import android.app.AlertDialog;
+import android.content.Context;
+import android.os.Vibrator;
+
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -60,12 +63,19 @@ public class MainActivity extends AppCompatActivity {
                 getSupportFragmentManager().findFragmentById(R.id.sceneform_fragment);
         fragment.getArSceneView().getScene().addOnUpdateListener(frameTime -> {
             fragment.onUpdate(frameTime);
+
             onUpdate();
         });
-        FloatingActionButton fab = findViewById(R.id.fab);
+        FloatingActionButton fab = findViewById(R.id.fab);/**/
 
-        fab.setOnClickListener(view -> takePhoto());
+        fab.setOnClickListener(view -> takePhoto());/**/
         initializeGallery();
+        new Thread()
+        {
+            public void run() {
+                canMove();
+            }
+        }.start();
 
     }
 
@@ -95,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
         boolean trackingChanged = updateTracking();
         View contentView = findViewById(android.R.id.content);
         if (trackingChanged) {
+
             /*
             if (isTracking) {
                 contentView.getOverlay().add(pointer);
@@ -114,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     private boolean updateTracking() {
+
         Frame frame = fragment.getArSceneView().getArFrame();
         boolean wasTracking = isTracking;
         isTracking = frame != null &&
@@ -121,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
         return isTracking != wasTracking;
     }
     private boolean updateHitTest() {
+
         Frame frame = fragment.getArSceneView().getArFrame();
         android.graphics.Point pt = getScreenCenter();
         List<HitResult> hits;
@@ -142,6 +155,7 @@ public class MainActivity extends AppCompatActivity {
 
     private android.graphics.Point getScreenCenter() {
         View vw = findViewById(android.R.id.content);
+
         return new android.graphics.Point(vw.getWidth()/2, vw.getHeight()/2);
     }
     private void initializeGallery() {
@@ -172,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
         gallery.addView(igloo);
     }
     private void addObject(Uri model) {
+
         Frame frame = fragment.getArSceneView().getArFrame();
         android.graphics.Point pt = getScreenCenter();
         List<HitResult> hits;
@@ -186,8 +201,34 @@ public class MainActivity extends AppCompatActivity {
 
                 }
             }
+
         }
     }
+    private void canMove(){
+        Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        while(true) {
+            Frame frame = fragment.getArSceneView().getArFrame();
+            android.graphics.Point pt = getScreenCenter();
+            List<HitResult> hits;
+            if (frame!=null) {
+                hits = frame.hitTest(pt.x, pt.y);
+
+                for (HitResult hit : hits) {
+                    Trackable trackable = hit.getTrackable();
+
+                    if (trackable instanceof Plane &&
+                            ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
+                        System.out.println(hit.getDistance());
+                        if (hit.getDistance() > 0.5)
+                            v.vibrate(500);
+                        break;
+
+                    }
+                }
+            }
+        }
+    }
+
     private void placeObject(ArFragment fragment, Anchor anchor, Uri model) {
         CompletableFuture<Void> renderableFuture =
                 ModelRenderable.builder()
